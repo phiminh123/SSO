@@ -1,0 +1,54 @@
+@page "/DoiMatKhau1"
+@using NewProject.Models
+@using NewProject.Components
+@inject NavigationManager UriHelper
+@inject ApiServices apiService
+@inject AuthenServices autService
+<style>
+    .rz-label {
+        margin-bottom: 0;
+        font-weight: bold;
+    }
+
+    .rz-column-title-content {
+        font-weight: bold;
+    }
+</style>
+
+<TableAPI @ref=grd TItem="tbUser" TableTitle="TÀI KHOẢN NGƯỜI DÙNG" FormTitle="THÔNG TIN MẬT KHẨU" query=@query lamda=@lamda
+       AddNew=false isSearch=false ShowClose=true >
+    <MoreColumns>
+        <RadzenDataGridColumn TItem="tbUser" Title="Tên tài khoản" TextAlign="TextAlign.Left" Sortable="false"
+                              Width="200px" Property="UserName" Frozen="true">
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="tbUser" Title="Họ và tên người dùng" TextAlign="TextAlign.Left" Sortable="false"
+                              Width="100%" Property="FullName" Frozen="true">
+        </RadzenDataGridColumn>
+    </MoreColumns>
+    <FormDialog Context="ctx">
+        <DoiMatKhau_Detail Record="ctx" />
+    </FormDialog>
+</TableAPI>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; } = default!;
+    TableAPI<tbUser> grd;
+    string query;
+    tbUser user = new tbUser();
+    string lamda = "";
+    protected override async Task OnInitializedAsync()
+    {
+        //var authState = await authenticationState;
+        //string token = authState.User.Claims. ?? "";
+        //user = await apiService.Me<tbUser>("api/user/me");
+        user = await autService.GetMe();
+        query = "api/user/getallpaged";
+        lamda = "p=>(p.IdUser==" + user.IdUser + ")";
+
+        //user = dbContext.tbUsers.Where(item => item.token == token).FirstOrDefault();
+        if (user == null)
+        {
+            UriHelper.NavigateTo($"/login", true);
+        }
+    }
+}

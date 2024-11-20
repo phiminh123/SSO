@@ -1,0 +1,102 @@
+@using NewProject.Models
+@inject dbAccountContext dbAccount
+@inject Radzen.DialogService dialog
+@inject NotificationService notificationService
+@inject NavigationManager UriHelper
+@inject IJSRuntime JSRuntime
+@inject ApiServices apiService
+@using Microsoft.EntityFrameworkCore
+@using NewProject.Components
+@using NewProject.Services
+
+<style>
+    .rz-textbox {
+        width: 100%;
+    }
+</style>
+<style>
+    .rz-dialog-titlebar {
+        margin-left: 20px;
+        margin-bottom: -20px;
+    }
+</style>
+
+@if (!Loading)
+{
+    <Form TItem="tbUser" Record=@user OnSubmit=@(args => Submit((tbUser)args))>
+        <MoreForms>
+            <div class="row">
+                <FormField Text="Họ và tên" Size="6">
+                    <RadzenTextBox @bind-Value=@user.FullName />
+                </FormField>
+                <FormField Text="Tên đăng nhập" Size="6">
+                    <RadzenTextBox Name="UserName" @bind-Value=@user.UserName Style="Width: 100%" />
+                    <RadzenRequiredValidator Component="UserName" Text="Bắt buộc" />
+                </FormField>
+                <FormField Text="Gán vào nhóm người dùng" Size="6">
+                    <RadzenDropDown AllowClear="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                Data=@lstGroup ValueProperty="IdNhom" TextProperty="TenNhom" @bind-Value=@user.IdNhom Style="Width: 100%" />
+                </FormField>
+                <FormField Text="Gắn tài khoản với cán bộ" Size="6">
+                    <RadzenDropDown AllowClear="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    Data=@lstCanBo ValueProperty="IdCanBo" TextProperty="HoTen" Change=@(args => OnChange(args)) @bind-Value=@user.IdCanBo Style="Width: 100%" />
+                </FormField>
+                <FormField Text="Thuộc đơn vị" Size="12">
+                    <RadzenTextBox @bind-Value=@DonVi Style="Width: 100%" />
+                </FormField>
+            </div>
+        </MoreForms>
+    </Form>
+}
+
+@code {
+    [Parameter] public tbUser Record { get; set; }
+    bool Loading = false;
+    tbUser user = new tbUser();
+    List<tbNhom> lstGroup = new List<tbNhom>();
+    List<tbCanBo> lstCanBo = new List<tbCanBo>();
+    string DonVi = "";
+    protected override async Task OnInitializedAsync()
+    {
+        string apiNhomPath = "api/nhom1/getallnopaged";
+        string apiCanBoPath = "api/canbo/getallnopaged";
+        if (Record == null || Record.IdUser == 0)
+        {
+            user = new tbUser();
+        }
+        else
+        {
+            user = Record;
+        }
+        // lstGroup = (await apiService.GetAll<tbNhom>(apiNhomPath)).Select(p=> new tbNhom {IdNhom=p.IdNhom,TenNhom=p.TenNhom +"(" + p.MoTa + ")" }).ToList();
+        // lstCanBo = await apiService.GetAll<tbCanBo>(apiCanBoPath);
+        // DonVi = lstCanBo.FirstOrDefault(p => p.IdCanBo == user.IdCanBo)?.DonVi;
+
+    }
+    private void OnChange(object args)
+    {
+        // DonVi = lstCanBo.FirstOrDefault(p => p.IdCanBo == user.IdCanBo)?.DonVi;
+    }
+    protected async Task Submit(tbUser objUser)
+    {
+        try
+        {
+            if (Record.IdUser == 0)
+            {
+                string seqName = "seq_tbUser";
+                objUser.IdUser = await apiService.GetId<int>($"api/user/getid", seqName);
+                //objUser.PasswordHash = Libs.CreateSHAHash(objUser.PasswordHash);
+                ///objUser.token = await Task.Run(() => TokenHelper.GenerateToken(objUser));
+                await apiService.Create<tbUser>($"api/user", objUser);
+
+                // dbAccount.tbUsers.Add(objUser);
+                // dbAccount.SaveChanges();
+                // notificationService.Notify(NotificationSeverity.Success, $"Thông báo:", "Thêm mới thành công", duration: 1500);
+            }
+        }
+        catch
+        {
+            //notificationService.Notify(NotificationSeverity.Error, $"Thông báo:", "Thay đổi không thành công", duration: 1500);
+        }
+    }
+}

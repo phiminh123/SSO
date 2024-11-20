@@ -1,0 +1,91 @@
+@using NewProject.Models
+@inject dbAccountContext dbAccount
+@inject Radzen.DialogService dialog
+@inject NotificationService notificationService
+@inject NavigationManager UriHelper
+@inject IJSRuntime JSRuntime
+@inject ApiServices apiService
+@using Microsoft.EntityFrameworkCore
+@using NewProject.Components
+@using NewProject.Services
+
+<style>
+    .rz-textbox {
+        width: 100%;
+    }
+</style>
+<style>
+    .rz-dialog-titlebar {
+        margin-left: 20px;
+        margin-bottom: -20px;
+    }
+</style>
+
+@if (!Loading)
+{
+    <Form TItem="tbCanBo" Record=@canbo OnSubmit=@(args => Submit((tbCanBo)args))>
+        <MoreForms>
+            <div class="row">
+                <FormField Text="Họ và tên" Size="3">
+                    <RadzenTextBox @bind-Value=@canbo.HoTen />
+                </FormField>
+                <FormField Text="Ngày sinh" Size="3">
+                    <RadzenDatePicker @bind-Value=@canbo.NgaySinh Style="Width: 100%" />
+                </FormField>
+                <FormField Text="Đơn vị" Size="6">
+                    <RadzenDropDown AllowClear="true" AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    Data=@lstDonVi ValueProperty="IdDonVi" TextProperty="TenDonVi" @bind-Value=@canbo.IdDonVi Style="Width: 100%" />
+                </FormField>
+                <div class="col-12">
+                        <UploadFile XacNhan="@(XacNhan||isAccepted)" listFile="@listUpload"
+                            listFileChanged="@(arg => ChangeUpload((List<FileUpload>)arg))" />
+                </div>
+            </div>
+        </MoreForms>
+    </Form>
+}
+
+@code {
+    [Parameter] public tbCanBo Record { get; set; }
+    [Parameter] public bool XacNhan { get; set; } = false;
+    bool Loading = false;
+    tbCanBo canbo = new tbCanBo();
+    List<tbDonVi> lstDonVi = new List<tbDonVi>();
+    List<FileUpload> listUpload = new List<FileUpload>();
+    List<tbFile> listFile = new List<tbFile>();
+    bool isAccepted = false;
+    protected override async Task OnInitializedAsync()
+    {
+        canbo = (Record == null || Record.IdCanBo == 0) ? canbo : Record;
+        lstDonVi = await apiService.GetAll<tbDonVi>("api/donvi/getallnopaged");
+    }
+    protected async Task Submit(tbCanBo canbo)
+    {
+        if (Record.IdCanBo == 0)
+        {
+            //Thêm mới một bản ghi
+            //1. Chuẩn bị dữ liệu
+            canbo.IdCanBo = await apiService.GetId<int>($"api/canbo/getid", "seq_tbCanBo");
+
+
+            //2. Thêm dữ liệu vào bảng
+             await apiService.Create<tbCanBo>($"api/canbo", canbo);
+        }
+        else
+        {
+            //Cập nhật một bản ghi
+            //1. Chuẩn bị dữ liệu (nếu có)
+
+
+            //2. Thêm dữ liệu vào bảng
+            await apiService.Update<tbDonVi>("api/canbo", canbo);
+        }
+    }
+    protected void ChangeUpload(List<FileUpload> uploads)
+    {
+        listUpload = uploads;
+        List<string> listUploaded = listUpload.Select(item => item.uid).ToList();
+
+        string MinhChung = String.Join(" ", listUploaded.ToArray());
+    }
+}

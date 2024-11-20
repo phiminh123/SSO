@@ -1,0 +1,37 @@
+@inject NavigationManager UriHelper
+<li class=@subMenuMode>
+    <div class="iocn-link">
+        <a href="javascript:void(0)" @onclick=@navigateMenu>
+            <i class=@Icon></i>
+            <span class="link_name">@(isClose == false ? Name : "")</span>
+        </a>
+        @if (SubMenus != null)
+        {
+            <i class='bx bxs-chevron-down arrow' @onclick=@toggleSubMenus></i>
+        }
+    </div>
+    <ul class=@(SubMenus == null ? "sub-menu blank" : "sub-menu")>
+        <li><a class="link_name" href="javascript:void(0)" @onclick=@navigateMenu><i class=@Icon></i>@Name</a></li>
+        @SubMenus
+    </ul>
+</li>
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+    [Parameter] public string Path { get; set; } = "";
+    [Parameter] public RenderFragment? SubMenus { get; set; } = null;
+    [Parameter] public string Icon { get; set; } = "";
+    [Parameter] public bool isClose { get; set; } = false;
+    string subMenuMode = "";
+
+    protected void toggleSubMenus()
+    {
+        subMenuMode = subMenuMode == "" ? "showMenu" : "";
+    }
+
+    protected void navigateMenu()
+    {
+        subMenuMode = subMenuMode == "" ? "showMenu" : "";
+        UriHelper.NavigateTo(Path);
+    }
+}

@@ -1,0 +1,64 @@
+@page "/admin/QLTaiKhoanV1"
+@using NewProject.Components
+@using NewProject.Models
+@inject dbAccountContext dbContext
+@inject NotificationService notificationService
+@inject NavigationManager UriHelper
+@inject ApiServices apiService
+
+<style>
+    .rz-label {
+        margin-bottom: 0;
+        font-weight: bold;
+    }
+
+    .rz-column-title-content {
+        font-weight: bold;
+    }
+</style>
+
+<TableAPI @ref=grd TItem="tbUser" TableTitle="DANH SÁCH TÀI KHOẢN NGƯỜI DÙNG" query=@query
+       OnDelete="@(args => Delete((tbUser)args))" OnAdd="@(args => Add((tbUser)args))" AddNew=true isSearch=false ShowClose=true>
+    <MoreColumns>
+        <RadzenDataGridColumn TItem="tbUser" Title="Tên tài khoản" TextAlign="TextAlign.Left" Sortable="false"
+                              Width="200px" Property="UserName" Frozen="true">
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="tbUser" Title="Họ và tên người dùng" TextAlign="TextAlign.Left" Sortable="false"
+                              Width="100%" Property="FullName" Frozen="true">
+        </RadzenDataGridColumn>
+    </MoreColumns>
+    <FormDialog Context="ctx">
+     
+        <QLTaiKhoanV1_Detail Record="ctx"  />
+    </FormDialog>
+</TableAPI>
+@code {
+    TableAPI<tbUser> grd;
+    string query=default!;
+    protected override async Task OnInitializedAsync()
+    {
+        //query = dbContext.tbUsers.Where(p=>p.IdUser==-1).AsQueryable();
+        query = "api/user/getallpaged";
+    }
+    protected async Task Delete(tbUser record)
+    {
+        try
+        {
+            string apiPath = "api/user";
+            string lamda = "p=>p.IdUser==record.IdUser";
+            await apiService.Delete<tbUser>(apiPath, lamda);
+            // dbContext.tbUsers.Remove(record);
+            // await dbContext.SaveChangesAsync();
+            // notificationService.Notify(NotificationSeverity.Info, $"Thông báo:", "Đã xóa liệu", duration: 1500);
+            await grd.Refresh();
+        }
+        catch
+        {
+            //notificationService.Notify(NotificationSeverity.Error, $"Lỗi khi xoá dữ liệu", duration: -1);
+        }
+    }
+    protected async Task Add(tbUser record)
+    {
+        await grd.Refresh();
+    }
+}

@@ -1,0 +1,124 @@
+@page "/admin/QLNhomV1"
+@using NewProject.Components
+@using NewProject.Models
+@using System.Linq
+@using System.Linq.Expressions;
+@inject HttpClient Http
+@inject NotificationService notificationService
+@inject ApiServices apiServices
+<style>
+    .rz-label {
+        margin-bottom: 0;
+        font-weight: bold;
+    }
+
+    .rz-column-title-content {
+        font-weight: bold;
+    }
+</style>
+
+@* <TableAPI TItem="vNguoi" TableTitle="DANH SÁCH NHÓM NGƯỜI DÙNG" token="@token" query="api/nguoi1/getallwithpaged" filterCon="@filterCon" con="@con" val="@val"
+     ShowClose=true>
+    <MoreColumns>
+        <RadzenDataGridColumn TItem="vNguoi" Title="Họ tên" TextAlign="TextAlign.Left" Sortable="false" Width="200px"
+                              Property="HoTen" Frozen="true">
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="vNguoi" Title="Ngày sinh" TextAlign="TextAlign.Left" Sortable="false" Width="200px"
+                              Property="NgaySinh" Frozen="true">
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="vNguoi" Title="Quê quán" TextAlign="TextAlign.Left" Sortable="false" Width="100%"
+                              Property="QueQuan" Frozen="true">
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="vNguoi" Title="Giới tính" TextAlign="TextAlign.Left" Sortable="false" Width="200px"
+                              Property="GioiTinh" Frozen="true">
+        </RadzenDataGridColumn>
+    </MoreColumns>
+     <FormDialog Context="ctx">
+        <QLNhomV1_Detail Record="ctx" />
+    </FormDialog> 
+</TableAPI> *@
+@* lamda="@lamda" strLamda="@strLamda" lamdaVal="@lamdaVal"  *@
+<TableAPI @ref=grd TItem="tbNhom" TableTitle="DANH SÁCH NHÓM NGƯỜI DÙNG" query="@query"
+          OnDelete="@(args => Delete((tbNhom)args))" OnAdd="@(args => Add((tbNhom)args))" isSearch=false ShowClose=true>
+    <MoreColumns>
+        <RadzenDataGridColumn TItem="tbNhom" Title="Tên nhóm" TextAlign="TextAlign.Left" Sortable="false" Width="200px"
+                              Property="TenNhom" Frozen="true">
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="tbNhom" Title="Mô tả nhóm" TextAlign="TextAlign.Left" Sortable="false" Width="100%"
+                              Property="MoTa" Frozen="true">
+        </RadzenDataGridColumn>
+    </MoreColumns>
+    <FormDialog Context="ctx">
+        <QLNhomV1_Detail Record="ctx" />
+    </FormDialog>
+</TableAPI>
+
+@* <Table TItem="tbNhom" TableTitle="DANH SÁCH NHÓM NGƯỜI DÙNG"  listData="@l"
+           ShowClose=true>
+    <MoreColumns>
+        <RadzenDataGridColumn TItem="tbNhom" Title="Tên nhóm" TextAlign="TextAlign.Left" Sortable="false" Width="200px"
+            Property="TenNhom" Frozen="true">
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="tbNhom" Title="Mô tả" TextAlign="TextAlign.Left" Sortable="false" Width="200px"
+            Property="MoTa" Frozen="true">
+        </RadzenDataGridColumn>
+    </MoreColumns>
+    <FormDialog Context="ctx">
+        <QLNhomV1_Detail Record="ctx" />
+    </FormDialog>
+</Table>
+ *@
+@code {
+    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; } = default!;
+
+    //TableAPI<tbNhom> GTable = default!;
+    Table<tbNhom> GTable = default!;
+    TableAPI<tbNhom> grd = default!;
+    string query= default!;
+    string lamda;
+    string strLamda ;
+    string lamdaVal ;
+    List<tbNhom> l;
+    protected override async Task OnInitializedAsync()
+    {
+        // var authState = await authenticationState;
+        // token = authState.User.Identity?.Name ?? "";
+        //query = (await  apiServices.GetAll<tbNhom>("api/nhom1/getallnopaged")).AsQueryable();
+
+        DateTime d = new DateTime(2024, 5, 2);
+        string Ten = "NV7";
+        string MT = "khoa";
+        //Đoạn code lấy dữ liệu cho TableAPI
+        query ="api/nhom/getallpaged";//apiPath
+        int Id = 105;
+        //lamda = p => p.IdNhom>=-1;//lamda
+        //strLamda = "0";//strLamda là rỗng
+        //strLamda = "p => (p.IdNhom >= -1)";
+        lamda = "p => (p.IdNhom >= " + Id + ")";
+
+        //query = "api/nhom1/getallpagedpara";
+        //string con = "p => (((p.TenNhom == \"HT\") AndAlso (p.IdNhom >= -1)) AndAlso (p.NgayTao >= new DateTime(1,1, 1)))";
+        //string val = "p => (((p.TenNhom == \"" + HT + "\") AndAlso(p.IdNhom >= " + Id + ")) AndAlso(p.NgayTao >= " + d + "))";
+
+
+        //List<tbNhom> l = nhomServices.GetAll().Result;
+        //l = await apiServices.GetAll<vNguoi>($"api/nguoi1/getallnopaged?filterCon={encodedExpression}");
+        //l = await apiServices.GetAll<tbNhom>($"api/nhom1/getallnopaged?filterCon={filterCon}&con={con}&val={val}");
+        // l = await apiServices.GetAll<tbNhom>($"api/nhom1/getallnopagedpara");
+        // l = await apiServices.GetAll<tbNhom>($"api/nhom1/getallnopagedpara",lamda,strLamda,lamdaVal);
+        //l = await nhomServices.GetAll($"filterCon={filterCon}");
+    }
+    protected async Task Delete(tbNhom record)
+    {
+        string apiPath = "api/nhom1";
+        //lamda = p => p.IdNhom == -1;
+        strLamda = "p => (p.IdNhom == -1)";
+        lamdaVal = "p => (p.IdNhom == "+ record.IdNhom + ")";
+        //await apiServices.Delete($"api/nhom1?lamda={lamda}&strLamda={strLamda}&lamdaVal={lamdaVal}");
+        await apiServices.Delete<tbNhom>(apiPath,lamdaVal);
+    }
+    protected async Task Add(tbNhom record)
+    {
+        await grd.Refresh();
+    }
+}

@@ -1,0 +1,42 @@
+@using Newtonsoft.Json
+<style>
+    .rz-fileupload-buttonbar {
+        background-color: white !important;
+    }
+</style>
+<RadzenText style="color: rgb(10, 10, 178); margin-top: 1.5rem; font-weight: bold; margin-bottom: 1rem;"
+    Text="@TextDisplay" />
+<RadzenCard Variant="Variant.Filled">
+
+    @for (int i = 0; i < listFile.Count(); i++)
+    {
+        <Link XacNhan="@XacNhan" file="@listFile[i]" Id="@listFile.IndexOf(listFile[i])"
+            OnDeleteFile="@(arg => deleteFile((int)arg))" />
+    }
+    @if (!XacNhan)
+    {
+        <RadzenUpload Url="upload/multiple" Multiple="true" Complete="@(arg => Complete(arg.RawResponse))"
+            ChooseText="Chọn file">
+        </RadzenUpload>
+    }
+    </RadzenCard>
+
+    @code {
+
+    [Parameter] public List<FileUpload> listFile { get; set; } = new List<FileUpload>();
+    [Parameter] public bool XacNhan { get; set; } = false;
+    [Parameter] public string TextDisplay { get; set; } = "Danh sách minh chứng";
+    [Parameter] public EventCallback<List<FileUpload>> listFileChanged { get; set; }
+    protected async void Complete(string urls)
+    {
+        List<FileUpload> listUrls = JsonConvert.DeserializeObject<List<FileUpload>>(urls) ?? new List<FileUpload>();
+        listFile.AddRange(listUrls);
+        await listFileChanged.InvokeAsync(listFile);
+    }
+
+    protected async void deleteFile(int id)
+    {
+        listFile.RemoveAt(id);
+        await listFileChanged.InvokeAsync(listFile);
+    }
+}

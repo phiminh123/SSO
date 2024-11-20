@@ -1,0 +1,160 @@
+﻿@page "/DoiMatKhau"
+@using NewProject.Components
+@using NewProject.Models
+@using NewProject.Services
+@using System.DirectoryServices.AccountManagement
+@using System.DirectoryServices
+@inject dbAccountContext dbContext
+@inject Radzen.DialogService dialog
+@inject NotificationService notificationService
+@inject NavigationManager UriHelper
+@inject ApiServices apiService
+@inject AuthenServices autService
+<style>
+    .rz-textbox {
+        width: 100%;
+    }
+</style>
+<style>
+    .rz-dialog-titlebar {
+        margin-left: 20px;
+        margin-bottom: -20px;
+    }
+</style>
+@if (!Loading)
+{
+    <Form TItem="tbUser" Record=@objUser OnSubmit=@(args => Submit((tbUser)args))>
+        <MoreForms>
+            <div class="row">
+                <FormField Text="Tên đăng nhập" Size="12">
+                    <RadzenTextBox Disabled=true @bind-Value=@objUser.UserName />
+                </FormField>
+                <FormField Text="Tên đầy đủ" Size="12">
+                    <RadzenTextBox Disabled=true @bind-Value=@objUser.FullName />
+                </FormField>
+                <FormField Text="Mật khẩu cũ" Size="12">
+                    <RadzenPassword @bind-Value=@OldPassword />
+                </FormField>
+             
+                <FormField Text="Mật khẩu mới" Size="12">
+                    <RadzenPassword @bind-Value=@NewPassword />
+                </FormField>
+                <FormField Text="Nhập lại mật khẩu mới" Size="12">
+                    <RadzenPassword @bind-Value=@ConfirmPassword />
+                </FormField>
+            </div>
+        </MoreForms>
+    </Form>
+}
+@code {
+    [Parameter] public tbUser Record { set; get; }//Đối tượng thao tác
+    tbUser objUser=new tbUser();
+    bool Loading = false;
+    string OldPassword;
+    string NewPassword;
+    string ConfirmPassword;
+    protected override async Task OnInitializedAsync()
+    {
+        //Record truyền vào là null thì nhập mới
+        //objUser = await apiService.Me<tbUser>("api/user/me");
+        objUser = await autService.GetMe();
+    }
+
+    protected async Task Submit(tbUser obj)
+    {
+        try
+        {
+            string PasswordHash = HashingServices.HashPassword(OldPassword);
+            if (obj.PasswordHash != HashingServices.HashPassword(OldPassword))
+            {
+                notificationService.Notify(NotificationSeverity.Success, "Mật khẩu cũ chưa đúng", null, duration: 2000);
+                return;
+            }
+            if (NewPassword != ConfirmPassword)
+            {
+                notificationService.Notify(NotificationSeverity.Success, "Mật khẩu mới và xác thực mật khẩu mới không giống nhau", null, duration: 2000);
+                return;
+            }
+            //Là một LDAP Account
+            if(obj.IsLDAPAccount==true)
+            {
+                //Xác thực lại một lần nữa để xác định chính là người dùng này
+                if (!LDAPAcount())
+                {
+                    notificationService.Notify(NotificationSeverity.Success, "Mật khẩu cũ chưa đúng", null, duration: 2000);
+                    return;
+                }
+                ChangeLDAPUserPassword(obj.UserName, NewPassword);
+                obj.PasswordHash = PasswordHash;
+                dbContext.tbUsers.Update(obj);
+                await dbContext.SaveChangesAsync();
+                notificationService.Notify(NotificationSeverity.Success, "Đã cập nhật mật khẩu", null, duration: 2000);
+
+            }
+            else
+            {
+                if (obj.PasswordHash!=PasswordHash)
+                {
+                    notificationService.Notify(NotificationSeverity.Success, "Mật khẩu cũ chưa đúng", null, duration: 2000);
+                    return;
+                }
+                obj.PasswordHash = PasswordHash;
+                dbContext.tbUsers.Update(obj);
+                await dbContext.SaveChangesAsync();
+                notificationService.Notify(NotificationSeverity.Success, "Đã cập nhật mật khẩu", null, duration: 2000);
+
+            }
+            
+        }
+        catch
+        {
+            notificationService.Notify(NotificationSeverity.Error, "Lỗi khi lưu dữ liệu", null, duration: 2000);
+        }
+    }
+
+    private bool ChangeLDAPUserPassword(string username, string newPassword)
+    {
+        bool Ok = false;
+        PrincipalContext principalContext = null;
+        try
+        {
+            principalContext = new PrincipalContext(System.DirectoryServices.AccountManagement.ContextType.Domain, "C500.edu.vn", "nghiand", "@Abc123");
+        }
+        catch(Exception e)
+        {
+
+        }
+        UserPrincipal usr = UserPrincipal.FindByIdentity(principalContext, username);
+        if(usr!=null)
+        {
+            usr.SetPassword(newPassword);
+            usr.Enabled = true;
+            usr.ExpirePasswordNow();
+            try
+            {
+                usr.Save();
+                return true;
+            }
+            catch(Exception e)
+            {
+                
+            }
+        }
+        return Ok;
+    }
+    public bool LDAPAcount()
+    {
+        bool authentic = false;
+        try
+        {
+            System.DirectoryServices.DirectoryEntry entry = new DirectoryEntry("LDAP://" + "c500.edu.vn", objUser.UserName, OldPassword);
+            object nativeObject = entry.NativeObject;
+            authentic = true;
+        }
+        catch
+        {
+
+        }
+        return authentic;
+    }
+}

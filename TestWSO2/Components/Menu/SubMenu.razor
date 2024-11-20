@@ -1,0 +1,19 @@
+@inject NavigationManager UriHelper
+
+<li><a href="javascript:void(0)" class="@(Focus ? "onfocus" : "")" @onclick=@navigateMenu><i class=@Icon />@Name</a>
+</li>
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+    [Parameter] public string Path { get; set; } = "";
+    [Parameter] public string Icon { get; set; } = "";
+    [Parameter] public int Id { get; set; } = 0;
+    [Parameter] public bool Focus { get; set; } = false;
+    [Parameter] public EventCallback<int> OnClickMenu { get; set; }
+    protected async Task navigateMenu()
+    {
+        await OnClickMenu.InvokeAsync(Id);
+        UriHelper.NavigateTo(Path);
+    }
+
+}

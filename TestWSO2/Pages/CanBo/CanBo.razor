@@ -1,0 +1,61 @@
+@page "/CanBo"
+@using NewProject.Components
+@using NewProject.Models
+@inject dbAccountContext dbContext
+@inject NotificationService notificationService
+@inject NavigationManager UriHelper
+@inject ApiServices apiService
+
+<style>
+    .rz-label {
+        margin-bottom: 0;
+        font-weight: bold;
+    }
+
+    .rz-column-title-content {
+        font-weight: bold;
+    }
+</style>
+
+<TableAPI @ref=grd TItem="tbCanBo" TableTitle="DANH SÁCH CÁN BỘ" query=@query
+          OnDelete="@(args => Delete((tbCanBo)args))" OnAdd="@(args => Add((tbCanBo)args))" AddNew=true isSearch=false ShowClose=true>
+    <MoreColumns>
+        <RadzenDataGridColumn TItem="tbCanBo" Title="Họ tên" TextAlign="TextAlign.Left" Sortable="false"
+                              Width="200px" Property="HoTen" Frozen="true">
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="tbCanBo" Title="Ngày sinh" TextAlign="TextAlign.Left" Sortable="false"
+                              Width="110px" Property="NgaySinh">
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="tbCanBo" Title="Đơn vị" TextAlign="TextAlign.Left" Sortable="false"
+                              Width="100%" Property="IdDonVi">
+            <Template Context="ctx">
+                 @lstDonVi.Where(p=>p.IdDonVi==ctx.IdDonVi).FirstOrDefault()?.TenDonVi
+            </Template>
+        </RadzenDataGridColumn>
+    </MoreColumns>
+    <FormDialog Context="ctx">
+        <CanBo_Detail Record="ctx"  />
+    </FormDialog>
+</TableAPI>
+@code {
+    TableAPI<tbCanBo> grd;
+    string query=default!;
+    List<tbDonVi> lstDonVi = new List<tbDonVi>();
+    protected override async Task OnInitializedAsync()
+    {
+        query = "api/canbo/getallpaged";
+        lstDonVi = await apiService.GetAll<tbDonVi>("api/donvi/getallnopaged");
+    }
+    protected async Task Delete(tbCanBo record)
+    {
+            string apiPath = "api/canbo";
+            string lamda = "p=>p.IdCanBo==" + record.IdCanBo;
+            await apiService.Delete<tbUser>(apiPath, lamda);
+            await grd.Refresh();
+    }
+    protected async Task Add(tbCanBo record)
+    {
+        query = "api/canbo/getallpaged";
+        //await grd.Refresh();
+    }
+}

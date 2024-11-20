@@ -1,0 +1,122 @@
+@inject IJSRuntime JSRuntime
+@inject DialogService dialog
+@inject ContextMenuService ContextMenuService
+<style>
+    .hover-link {
+        text-decoration: none;
+        outline: none !important;
+    }
+
+    .hover-link:hover {
+        text-decoration: underline !important;
+        outline: none;
+        -webkit-box-shadow: none !important;
+        box-shadow: none !important;
+    }
+
+    .hover-link::after {
+        background-repeat: no-repeat !important;
+        border: none !important;
+    }
+
+    .rz-button {
+        border: none !important;
+    }
+
+    .hover-link:end {
+        background-repeat: no-repeat !important;
+        border: none !important;
+        outline: none !important;
+    }
+
+    .hover-link:active {
+        background-repeat: no-repeat !important;
+        border: none !important;
+        outline: none !important;
+        background-color: White !important;
+        background-image: none !important;
+    }
+
+    .hover-link:focus-within {
+        -webkit-box-shadow: none !important;
+        box-shadow: none !important;
+    }
+
+    .hover-link:focus {
+        -webkit-box-shadow: none !important;
+        box-shadow: none !important;
+    }
+
+    .rz-dialog-title {
+        display: none;
+    }
+</style>
+
+<RadzenButton class="hover-link" style=" background-color: transparent;background-repeat:no-repeat;border: none;cursor: pointer; padding: 0.5%; margin-right: 10px;color:blue;
+                                                    " ContextMenu=@(args => ShowContextMenu(args)) Click="@(arg => ViewFile())">
+    <span class="hover-link">@file.fileName</span>
+</RadzenButton>
+
+
+
+@code {
+    [Parameter] public FileUpload file { get; set; } = new FileUpload();
+    [Parameter] public bool XacNhan {get; set;} = false;
+    [Parameter] public int Id { get; set; }
+    [Parameter] public EventCallback<int> OnDeleteFile { get; set; }
+    void ShowContextMenu(MouseEventArgs args) => ContextMenuService.Open(args, ds =>
+    @<RadzenMenu Click="arg => OnMenuItemClick(arg)">
+        <RadzenMenuItem Text="Xem tài liệu" Value="1" Icon="visibility"></RadzenMenuItem>
+
+        <RadzenMenuItem Text="Tải tài liệu" Value="2" Icon="file_download"></RadzenMenuItem>
+        
+        @if (!XacNhan) {
+        <RadzenMenuItem Text="Xoá tài liệu" Value="3" Icon="delete"></RadzenMenuItem>
+        }
+    </RadzenMenu>
+);
+
+    async void OnMenuItemClick(MenuItemEventArgs args)
+    {
+        if (args.Value.Equals(1))
+        {
+            try
+            {
+                string path = $"/preview-file?bucketName={file.bucketName}&objectName={file.uid}{Path.GetExtension(file.fileName)}";
+                await JSRuntime.InvokeVoidAsync("eval", $"let _discard_ = open(`{path}`, `_blank`)");
+            }
+            catch
+            {
+
+            }
+        }
+        if (args.Value.Equals(2))
+        {
+            try
+            {
+                await JSRuntime.InvokeAsync<object>("open",
+                $"/get-presigned-url?bucketName={file.bucketName}&objectName={file.uid}{Path.GetExtension(file.fileName)}",
+                "_blank");
+            }
+            catch { }
+        }
+        if (args.Value.Equals(3))
+        {
+            await OnDeleteFile.InvokeAsync(Id);
+        }
+        ContextMenuService.Close();
+    }
+
+    protected async void ViewFile(){
+        try
+            {
+                string path = $"/preview-file?bucketName={file.bucketName}&objectName={file.uid}{Path.GetExtension(file.fileName)}";
+                await JSRuntime.InvokeVoidAsync("eval", $"let _discard_ = open(`{path}`, `_blank`)");
+            }
+            catch
+            {
+
+            }
+    }
+
+}

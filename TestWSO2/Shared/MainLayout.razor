@@ -1,0 +1,115 @@
+﻿@inherits LayoutComponentBase
+@using NewProject.Components.Menu
+@using NewProject.Pages
+@inject HttpClient Http
+@inject ApiServices apiService
+@attribute [Authorize]
+<RadzenDialog />
+<RadzenNotification />
+<RadzenContextMenu />
+<RadzenTooltip />
+
+<PageTitle>Quản lý tài khoản</PageTitle>
+<AuthorizeView>
+    <NotAuthorized>
+        <RedirectToLogin />
+    </NotAuthorized>
+    <Authorized>
+        <div class="@("sidebar " + menuMode)">
+            <div class="logo-details">
+                <i><img src="logo.png" style="width: 35px" /></i>
+                <span class="logo_name">Quản lý tài khoản C500</span>
+            </div>
+            <ul class="nav-links">
+                @{
+                    List<tbChucNang> listParent = listChucNang.Where(item => item.ChucNangCha == null).ToList();
+                    for (int i = 0; i < listParent.Count; i++)
+                    {
+                        tbChucNang data = listParent[i];
+                        List<tbChucNang> listChild = listChucNang.Where(item => item.ChucNangCha == data.IdChucNang).ToList();
+                        if (listChild.Count > 0)
+                        {
+                            <Menu Path="@data.DuongDan" Name="@data.TenChucNang" Icon="@data.BieuTuong" isClose=@isClose>
+                                <SubMenus>
+                                    @for (int j = 0; j < listChild.Count; j++)
+                                    {
+                                        tbChucNang child = listChild[j];
+                                        <SubMenu Id="@child.IdChucNang" Focus="@dictFocus[child.IdChucNang]" Path="@child.DuongDan"
+                                            Name="@child.TenChucNang" Icon="@child.BieuTuong"
+                                            OnClickMenu="@(args => onClickMenu((int)args))" />
+                                    }
+
+                                </SubMenus>
+                            </Menu>
+                        }
+                        else
+                        {
+                            <Menu Path="@data.DuongDan" Name="@data.TenChucNang" Icon="@data.BieuTuong" isClose=@isClose />
+                        }
+
+                    }
+                }
+
+            </ul>
+        </div>
+        <section class="home-section">
+            <div class="home-content justify-content-between">
+
+                <div style="margin-top:0.3rem">
+                    <i class='bx bx-menu' style="color: white" @onclick="@toggleMenu"></i>
+                </div>
+                <div>
+                    <RadzenProfileMenu Style="background: none">
+                        <Template>
+                            <RadzenImage Path="logo.png" Style="width: 35px; height: 35px; margin-right: 0.2rem" />
+                            <span style="color: white">@(CanBo.HoTen ?? "Người dùng hệ thống")
+                            </span>
+                        </Template>
+                        <ChildContent>
+                            <RadzenProfileMenuItem Path="logout" Text="Đăng xuất" Icon="logout">
+                            </RadzenProfileMenuItem>
+                            <RadzenProfileMenuItem Path="thong-tin-ca-nhan" Text="Thông tin cá nhân"
+                                Icon="account_circle">
+                            </RadzenProfileMenuItem>
+                        </ChildContent>
+                    </RadzenProfileMenu>
+                </div>
+            </div>
+            <div style="margin-left: 1.5rem">
+                @Body
+            </div>
+        </section>
+    </Authorized>
+</AuthorizeView>
+
+
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> authenticationState { get; set; } = default!;
+    string menuMode = "";
+    bool isClose = false;
+    List<tbChucNang> listChucNang = new List<tbChucNang>();
+    Dictionary<int, bool> dictFocus = new Dictionary<int, bool>();
+    tbCanBo CanBo = new tbCanBo();
+    protected void toggleMenu()
+    {
+        menuMode = menuMode == "" ? "close" : "";
+        isClose = !isClose;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+            listChucNang = await apiService.GetAll<tbChucNang>("api/chucnang/getallnopaged");
+            for (int i = 0; i < listChucNang.Count(); i++)
+            {
+                dictFocus.Add(listChucNang[i].IdChucNang, false);
+            }
+    }
+    protected void onClickMenu(int id)
+    {
+        for (int i = 0; i < listChucNang.Count(); i++)
+        {
+            dictFocus[listChucNang[i].IdChucNang] = false;
+        }
+        dictFocus[id] = true;
+    }
+}

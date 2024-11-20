@@ -1,0 +1,66 @@
+@page "/DonVi"
+@using NewProject.Components
+@using NewProject.Models
+@inject dbAccountContext dbContext
+@inject NotificationService notificationService
+@inject NavigationManager UriHelper
+@inject ApiServices apiService
+
+<style>
+    .rz-label {
+        margin-bottom: 0;
+        font-weight: bold;
+    }
+
+    .rz-column-title-content {
+        font-weight: bold;
+    }
+</style>
+
+<InlineAPI @ref=grd TItem="tbDonVi" TableTitle="DANH SÁCH ĐƠN VỊ" query=@query
+           OnCreate="(data => Create((tbDonVi)data))" OnUpdate="(data => Update((tbDonVi)data))"
+           OnDelete="(data => Delete((tbDonVi)data))">
+           <MoreColumns>
+        <RadzenDataGridColumn TItem="tbDonVi" Title="Tên đơn vị" TextAlign="TextAlign.Left" Sortable="false"
+                              Width="100%" Property="TenDonVi">
+                <EditTemplate Context="ctx">
+                    <RadzenTextBox @bind-Value=@ctx.TenDonVi Style="width: 100%" Placeholder="Tên cấp bậc" />
+                </EditTemplate>
+        </RadzenDataGridColumn>
+    </MoreColumns>
+</InlineAPI>
+@code {
+    InlineAPI<tbDonVi> grd;
+    string query=default!;
+    protected override async Task OnInitializedAsync()
+    {
+        query = "api/donvi/getallpaged";
+    }
+
+    protected async Task Create(tbDonVi record)
+    {
+        //1. Chuẩn bị dữ liệu
+        record.IdDonVi = await apiService.GetId<int>("api/donvi/getid", "seq_tbDonVi");
+
+
+        //2. Thêm dữ liệu vào bảng
+        await apiService.Create<tbDonVi>("api/donvi",record);
+    }
+    protected async Task Update(tbDonVi record)
+    {
+        //1. Chuẩn bị dữ liệu (nếu có)
+
+
+        //2. Thêm dữ liệu vào bảng
+        await apiService.Update<tbDonVi>("api/donvi", record);
+    }
+    protected async Task Delete(tbDonVi record)
+    {
+        //1. Chuẩn bị điều kiện
+        string lamda = "p=>p.IdDonVi==" + record.IdDonVi;
+
+
+        //2. Thêm dữ liệu vào bảng
+        await apiService.Delete<tbDonVi>("api/donvi", lamda);
+    }
+}
