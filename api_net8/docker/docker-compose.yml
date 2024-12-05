@@ -7,3 +7,16 @@ services:
       - 6379:6379
     volumes:
       - ./cache:/data
+  keycloak:
+    image: quay.io/keycloak/keycloak:17.0.1
+    container_name: keycloak
+    environment:
+      - KEYCLOAK_ADMIN=admin         
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=dev-file
+    ports:
+      - "8080:8080"
+    command:
+      - start-dev   
+    volumes:
+      - ./.containers/identity:/opt/keyloak/data

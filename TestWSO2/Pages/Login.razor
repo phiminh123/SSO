@@ -1,16 +1,16 @@
 @page "/login"
 @page "/"
 @layout LoginLayout
+@using NewProject.Authentication
 @using NewProject.Services
 @using NewProject.Models
 @inject NavigationManager UriHelper
-@inject NotificationService notificationService
-@using NewProject.Authentication
-@inject AuthenticationStateProvider authStateProvider
+@inject NotificationService NotificationService
+@inject AuthenticationStateProvider AuthStateProvider
 @inject HttpClient Http
-@using NewProject.Dto.Nguoi
 
 <PageTitle>Đăng nhập hệ thống</PageTitle>
+
 <AuthorizeView>
     <Authorized>
         <RedirectToHome />
@@ -23,23 +23,20 @@
                         <div class="card-body p-8">
                             <div style="display: flex; align-items: center; justify-content: center">
                                 <img src="logo.png"
-                                    style="height:90px;width:auto; margin: 20 20 20 0; padding-right: 30px;" />
+                                     style="height:90px;width:auto; margin: 20 20 20 0; padding-right: 30px;" />
                                 <div class="text-center">
                                     <strong style="font-size: 1.8rem; margin-left:-20px;  color: #112572">HỆ THỐNG QUẢN LÝ TÀI KHOẢN NGƯỜI DÙNG</strong>
-                                    @*   <br />
-                                    <span style="font-size: 1rem">Quản lý dữ liệu người dùng</span> *@
-
                                 </div>
                             </div>
                             <div style="margin-left: 2rem; margin-right: 1.7rem">
-                                <RadzenTemplateForm TItem="tbNguoiDung" Data=@NguoiDung Submit="@Authenticate">
+                                <RadzenTemplateForm TItem="LoginModel" Data=@loginModel Submit="@HandleLoginAsync">
                                     <ChildContent Context="ctx">
                                         <RadzenFormField style="width: 100%; margin-top: 1.5rem" Text="Tên tài khoản">
                                             <Start>
                                                 <RadzenIcon Icon="account_circle" />
                                             </Start>
                                             <ChildContent>
-                                                <RadzenTextBox @bind-Value="@username" />
+                                                <RadzenTextBox @bind-Value="@loginModel.Username" />
                                             </ChildContent>
                                         </RadzenFormField>
                                         <RadzenFormField style="width: 100%; margin-top:1.5rem" Text="Mật khẩu">
@@ -47,31 +44,34 @@
                                                 <RadzenIcon Icon="lock" />
                                             </Start>
                                             <ChildContent>
-                                                <RadzenTextBox @bind-Value="@passwordValue"
-                                                    Visible="@(!viewPassword)" />
-                                                <RadzenPassword @bind-Value="@passwordValue" Visible="@viewPassword" />
+                                                <RadzenTextBox @bind-Value="@loginModel.Password"
+                                                               Visible="@(!showPassword)" />
+                                                <RadzenPassword @bind-Value="@loginModel.Password"
+                                                                Visible="@showPassword" />
                                             </ChildContent>
                                             <End>
-                                                <RadzenButton Icon="@(viewPassword ? "visibility" : "visibility_off")"
-                                                    Click="TogglePassword" Variant="Variant.Text"
-                                                    Size="ButtonSize.Small" />
+                                                <RadzenButton Icon="@(showPassword ? "visibility" : "visibility_off")"
+                                                              Click="@(() => showPassword = !showPassword)"
+                                                              Variant="Variant.Text"
+                                                              Size="ButtonSize.Small" />
                                             </End>
                                         </RadzenFormField>
                                         <div style="margin-top: 1.5rem">
-                                            <RadzenCheckBox @bind-Value=@value Name="save_login" />
-                                            <RadzenLabel Text="Ghi nhớ đăng nhập" Component="save_login"
-                                                Style="margin-left: 8px; vertical-align: middle;" />
+                                            <RadzenCheckBox @bind-Value=@rememberMe Name="remember_me" />
+                                            <RadzenLabel Text="Ghi nhớ đăng nhập" Component="remember_me"
+                                                         Style="margin-left: 8px; vertical-align: middle;" />
                                         </div>
-                                        <RadzenButton style="margin-top: 1.5rem; width: 100%; background-color:#112572 "
-                                            class="rz-info-darker" Text="Đăng nhập" ButtonType="ButtonType.Submit">
+                                        <RadzenButton style="margin-top: 1.5rem; width: 100%; background-color:#112572"
+                                                      ButtonType="ButtonType.Submit"
+                                                      class="rz-info-darker"
+                                                      Text="Đăng nhập"
+                                                      IsBusy="@isBusy"
+                                                      Disabled="@isBusy">
                                         </RadzenButton>
                                     </ChildContent>
-
                                 </RadzenTemplateForm>
-
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -79,55 +79,74 @@
     </NotAuthorized>
 </AuthorizeView>
 
-
-
 @code {
-    string passwordValue = "";
-    tbNguoiDung NguoiDung = new tbNguoiDung();
-    string username = "systemadmin";
-    bool value;
-    bool viewPassword = true;
-    string token = "";
+    private LoginModel loginModel = new();
+    private bool showPassword = false;
+    private bool rememberMe = false;
+    private bool isBusy = false;
 
-    void TogglePassword()
+    public class LoginModel
     {
-        viewPassword = !viewPassword;
-    }
-    public class LoginReq
-    {
-        public string username { get; set; } = "";
-        public string password { get; set; } = "";
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
     }
 
-    public async void Authenticate()
+    public class TokenResponse
+    {
+        public string access_token { get; set; }
+        public string refresh_token { get; set; }
+        public string token_type { get; set; }
+        public int expires_in { get; set; }
+        // Thêm các properties khác nếu cần
+    }
+
+    private async Task HandleLoginAsync()
     {
         try
         {
-            var new_post = new LoginReq { username = username, password = passwordValue };
-            var content = JsonContent.Create(new_post);
+            isBusy = true;
 
-            var response = await Http.PostAsync("api/auth/login", content);
-            ServiceResponse<string> data = new ServiceResponse<string>();
-            data.Data = "none";
+            var response = await Http.PostAsJsonAsync("api/AuthKeyCloak/login", loginModel);
+
             if (response.IsSuccessStatusCode)
             {
-                data = await response.Content.ReadFromJsonAsync<ServiceResponse<string>>() ?? new ServiceResponse<string>();
-                token = data?.Data ?? "";
+                var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
+
+                if (tokenResponse != null)
+                {
+                    // Lưu token vào storage
+                    var customAuthStateProvider = (CustomAuthenticationStateProvider)AuthStateProvider;
+                    await customAuthStateProvider.UpdateAuthenticationState(
+                        tokenResponse.access_token,
+                        rememberMe ? "local" : "session"
+                    );
+
+                    // Chuyển hướng về trang chủ
+                    UriHelper.NavigateTo("/home", true);
+                }
+                else
+                {
+                    NotificationService.Notify(NotificationSeverity.Error,
+                        "Thông báo",
+                        "Không thể xử lý phản hồi từ server");
+                }
             }
             else
             {
-                notificationService.Notify(NotificationSeverity.Error, $"Thông báo:", "Sai tên đăng nhập hoặc mật khẩu người dùng",
-                duration: -1);
-                return;
+                NotificationService.Notify(NotificationSeverity.Error,
+                    "Thông báo",
+                    "Sai tên đăng nhập hoặc mật khẩu người dùng");
             }
-            var customAuthStateProvider = (CustomAuthenticationStateProvider)authStateProvider;
-            await customAuthStateProvider.UpdateAuthenticationState($"{token}", value ? "local" : "session");
-            UriHelper.NavigateTo("/home", true);
         }
-        catch
+        catch (Exception ex)
         {
-            notificationService.Notify(NotificationSeverity.Error, $"Thông báo:", "Đã có lỗi xảy ra", duration: -1);
-            return;
+            NotificationService.Notify(NotificationSeverity.Error,
+                "Thông báo",
+                "Đã có lỗi xảy ra khi đăng nhập: " + ex.Message);
+        }
+        finally
+        {
+            isBusy = false;
         }
     }
 }
